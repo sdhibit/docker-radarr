@@ -1,17 +1,51 @@
-FROM sdhibit/mono-media:5.4
+FROM sdhibit/mono:5.0-glibc
 MAINTAINER Steve Hibit <sdhibit@gmail.com>
 
-# Install apk packages
-RUN apk --update upgrade \
- && apk --no-cache add \
-  ca-certificates \
-  sqlite \
-  sqlite-libs \
-  tar \
-  unrar \
- && update-ca-certificates \
- && cert-sync /etc/ssl/certs/ca-certificates.crt
+ENV LANG='en_US.UTF-8' \
+    LANGUAGE='en_US.UTF-8' \
+    TERM='xterm'
 
+ARG MEDIAINFO_VER="0.7.97"
+ARG LIBMEDIAINFO_URL="https://mediaarea.net/download/binary/libmediainfo0/${MEDIAINFO_VER}/MediaInfo_DLL_${MEDIAINFO_VER}_GNU_FromSource.tar.gz"
+ARG MEDIAINFO_URL="https://mediaarea.net/download/binary/mediainfo/${MEDIAINFO_VER}/MediaInfo_CLI_${MEDIAINFO_VER}_GNU_FromSource.tar.gz"
+
+#Build libmediainfo
+#Install build packages
+RUN apk --update upgrade \
+ && apk add --no-cache --virtual=build-dependencies \
+        g++ \
+        gcc \
+        git \
+        make \
+ && apk --update upgrade \
+ && apk add --no-cache \
+    ca-certificates \
+    curl \
+    libcurl \
+    libmms \
+    sqlite \
+    sqlite-libs \
+    tar \
+    unrar \
+    xz \
+    zlib \
+    zlib-dev \
+ && mkdir -p /tmp/libmediainfo \
+ && mkdir -p /tmp/mediainfo \
+ && curl -kL ${LIBMEDIAINFO_URL} | tar -xz -C /tmp/libmediainfo --strip-components=1 \
+ && curl -kL ${MEDIAINFO_URL} | tar -xz -C /tmp/mediainfo --strip-components=1 \
+ && cd /tmp/mediainfo \
+ && ./CLI_Compile.sh \
+ && cd /tmp/mediainfo/MediaInfo/Project/GNU/CLI \
+ && make install \
+ && cd /tmp/libmediainfo \
+ && ./SO_Compile.sh \
+ && cd /tmp/libmediainfo/ZenLib/Project/GNU/Library \
+ && make install \
+ && cd /tmp/libmediainfo/MediaInfoLib/Project/GNU/Library \
+ && make install \
+ && apk del --purge build-dependencies \
+ && rm -rf /tmp/*
 
 # Set Radarr Package Information
 ARG PKG_NAME="Radarr"
